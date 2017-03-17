@@ -8,24 +8,15 @@ import pandas as pd
 import yaml
 import click
 
-# import YATSM functions
 import yatsm
 from yatsm.io import read_line
 from yatsm.utils import csvfile_to_dataframe, get_image_IDs
-# from yatsm.config_parser import convert_config, parse_config_file
 import yatsm._cyprep as cyprep
 
 @click.command()
 @click.argument('row1', metavar='<row1>', nargs=1, type=click.INT)
 @click.argument('row2', metavar='<row2>', nargs=1, type=click.INT)
-#@click.argument('df_field', metavar='<df_field>', nargs=1, type=click.STRING)
-#@click.option('--mcsims', metavar='<mcsims>', nargs=1, type=click.INT, default=1,
-#             show_default=True, help='Number of cross-validated simulations to run')
-#@click.option('--nfolds', metavar='<nfolds>', nargs=1, type=click.INT, default=3,
-#              show_default=True, help='Number of folds for cross-validations')
-#@click.option('--ntrees', metavar='<ntrees>', nargs=1, type=click.INT, default=500,
-#              show_default=True, help='Number of trees in RF')
-#@click.option('--whole_image', is_flag=True, help='Generate all-predicted image')
+
 
 def annual(row1, row2):
 	NDV = -9999   
@@ -89,17 +80,14 @@ def annual(row1, row2):
 	range_TCG = np.zeros((py_dim, px_dim, length))
 	range_TCW = np.zeros((py_dim, px_dim, length))
 
-	#for py in range(0, py_dim): # row iterator
 	for py in range(row1, row2): # row iterator
 	    print('Working on row {py}'.format(py=py))
 	    Y_row = read_line(py, df['filename'], df['image_ID'], cfg['dataset'],
 	                      px_dim, n_band + 1, dtype,  # +1 for now for Fmask
 	                      read_cache=False, write_cache=False,
 	                      validate_cache=False)
-	    #print('Read in the data...')
 	    
 	    for px in range(0, px_dim): # column iterator
-	    #for px in range(2000, 2100): # column iterator
 	        Y = Y_row.take(px, axis=2)
 	        
 	        if (Y[0:6] == NDV).mean() > 0.3:
@@ -132,9 +120,6 @@ def annual(row1, row2):
 				dates_fmask = dates_fmask[multitemp2_fmask[0]] 
 				Y_fmask = Y_fmask[:, multitemp2_fmask[0]]
 
-				# convert SR x 10000 to float
-				#Y_fmask = Y_fmask.astype(float)/10000 
-
 				# convert time from ordinal to dates
 				dt_dates_fmask = np.array([dt.datetime.fromordinal(d) for d in dates_fmask])
 
@@ -161,41 +146,23 @@ def annual(row1, row2):
 				### TC Brightness
 				# Calculate mean annual TCB
 				TCB_mean = year_group_fmask['tcb'].mean()
-				# Calculate year-to-year difference in mean TCB
-				TCB_mean_diff = np.diff(TCB_mean)
-				# Cumulative sum of annual difference in TCB
-				TCB_mean_sum = np.cumsum(TCB_mean_diff)
 				# percentile clip 
 				TCB_iqr_H = year_group_fmask['tcb'].quantile([pct2])
 				TCB_iqr_L = year_group_fmask['tcb'].quantile([pct1])
-				#TCB_iqr = (TCB_iqr_H.values - TCB_iqr_L.values)
 
 				### TC Greenness 
-				TCG_mean = year_group_fmask['tcg'].mean()
-				# Find annual min TCG
-				TCG_min = year_group_fmask['tcg'].min()
-				# Find annual max TCG
-				TCG_max = year_group_fmask['tcg'].max()  
-				# Calculate annual range TCG       
-				TCG_amp = np.asarray(TCG_max - TCG_min)
-				# Normalize to first year's value (assuming forest)
-				#TCG_amp_adj = TCG_amp.astype(float) / TCG_amp[0].astype(float) 
+				# Calculate mean annual TCG
+				TCG_mean = year_group_fmask['tcg'].mean() 
 				# percentile clip 
 				TCG_iqr_H = year_group_fmask['tcg'].quantile([pct2])
 				TCG_iqr_L = year_group_fmask['tcg'].quantile([pct1])
-				#TCG_iqr = (TCG_iqr_H.values - TCG_iqr_L.values)
 
 				### TC Wetness 
 				# Calculate mean annual TCW
 				TCW_mean = year_group_fmask['tcw'].mean()
-				# Calculate year-to-year difference in mean TCB
-				TCW_mean_diff = np.diff(TCW_mean)
-				# Cumulative sum of annual difference in TCB
-				TCW_mean_sum = np.cumsum(TCW_mean_diff)
 				# percentile clip 
 				TCW_iqr_H = year_group_fmask['tcw'].quantile([pct2])
 				TCW_iqr_L = year_group_fmask['tcw'].quantile([pct1])
-				#TCW_iqr = (TCW_iqr_H.values - TCG_iqr_L.values)  
 
 
 				for index, year in enumerate(years):             
@@ -211,11 +178,6 @@ def annual(row1, row2):
 				        max_TCB[py, px, index] = TCB_iqr_H[year]
 				        max_TCG[py, px, index] = TCG_iqr_H[year]
 				        max_TCW[py, px, index] = TCW_iqr_H[year]
-
-				        #range_TCB[py, px, index] = max_TCB[py, px, index] - min_TCB[py, px, index]
-				       	#range_TCG[py, px, index] = max_TCG[py, px, index] - min_TCG[py, px, index]
-				        #range_TCW[py, px, index] = max_TCW[py, px, index] - min_TCW[py, px, index]
-				    #else: 
 
 	print('Statistics complete')
 
