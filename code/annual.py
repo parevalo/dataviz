@@ -23,8 +23,10 @@ def annual(row1, row2):
 
 	# EXAMPLE IMAGE for dimensions, map creation
 	example_img_fn = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/images/example_img'
+	#example_img_fn = '/projectnb/landsat/projectnb/landsat/projects/Massachusetts/p012r031/images/example_img'
 	# YATSM CONFIG FILE
 	config_file = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/p045r030_config_LCMS.yaml'
+	#config_file = '/projectnb/landsat/projectnb/landsat/projects/Massachusetts/p012r031/p012r031_config_pixel.yaml'
 
 	WRS2 = 'p045r030'
 
@@ -63,7 +65,7 @@ def annual(row1, row2):
 	df['x'] = df['date'] 
 	dates = df['date'].values
 
-	# Initialize arrays for storing stats and disturbance events
+	# Initialize arrays for storing stats
 	mean_TCB = np.zeros((py_dim, px_dim, length))
 	mean_TCG = np.zeros((py_dim, px_dim, length))
 	mean_TCW = np.zeros((py_dim, px_dim, length))
@@ -75,10 +77,6 @@ def annual(row1, row2):
 	max_TCB = np.zeros((py_dim, px_dim, length))
 	max_TCG = np.zeros((py_dim, px_dim, length))
 	max_TCW = np.zeros((py_dim, px_dim, length))
-
-	range_TCB = np.zeros((py_dim, px_dim, length))
-	range_TCG = np.zeros((py_dim, px_dim, length))
-	range_TCW = np.zeros((py_dim, px_dim, length))
 
 	for py in range(row1, row2): # row iterator
 	    print('Working on row {py}'.format(py=py))
@@ -245,25 +243,6 @@ def annual(row1, row2):
 	    out_ds.GetRasterBand(3).SetDescription('Maximum Annual TC Wetness')
 	    out_ds = None
 
-	    condition_fn = './{WRS2}_ST-BGW_range_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
-	    out_driver = gdal.GetDriverByName("GTiff")
-	    out_ds = out_driver.Create(condition_fn, 
-	                               example_img.shape[1],  # x size
-	                               example_img.shape[0],  # y size
-	                               3,  # number of bands
-	                               gdal.GDT_Int32)
-	    out_ds.SetProjection(in_ds.GetProjection())
-	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
-	    out_ds.GetRasterBand(1).WriteArray(range_TCB[:, :, index])
-	    out_ds.GetRasterBand(1).SetNoDataValue(-9999)
-	    out_ds.GetRasterBand(1).SetDescription('Annual Range TC Brightness')
-	    out_ds.GetRasterBand(2).WriteArray(range_TCG[:, :, index])
-	    out_ds.GetRasterBand(2).SetNoDataValue(-9999)
-	    out_ds.GetRasterBand(2).SetDescription('Annual Range TC Greenness')
-	    out_ds.GetRasterBand(3).WriteArray(range_TCW[:, :, index])
-	    out_ds.GetRasterBand(3).SetNoDataValue(-9999)
-	    out_ds.GetRasterBand(3).SetDescription('Annual Range TC Wetness')
-	    out_ds = None
 
 # Define image reading function
 def read_image(f):
