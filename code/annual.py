@@ -1,6 +1,9 @@
 #!/bin/python
 
+import logging
 import datetime as dt
+import time
+import sys
 
 import numpy as np
 from osgeo import gdal, gdal_array
@@ -79,19 +82,22 @@ def annual(row1, row2):
 	max_TCW = np.zeros((py_dim, px_dim, length))
 
 	for py in range(row1, row2): # row iterator
-	    print('Working on row {py}'.format(py=py))
-	    Y_row = read_line(py, df['filename'], df['image_ID'], cfg['dataset'],
-	                      px_dim, n_band + 1, dtype,  # +1 for now for Fmask
-	                      read_cache=False, write_cache=False,
-	                      validate_cache=False)
-	    
-	    for px in range(0, px_dim): # column iterator
-	        Y = Y_row.take(px, axis=2)
-	        
-	        if (Y[0:6] == NDV).mean() > 0.3:
-	            continue
-	        else: # process time series for disturbance events
-	            
+		print('Working on row {py}'.format(py=py))
+		sys.stdout.flush()
+		start_time = time.time()
+		
+		Y_row = read_line(py, df['filename'], df['image_ID'], cfg['dataset'],
+		                  px_dim, n_band + 1, dtype,  # +1 for now for Fmask
+		                  read_cache=False, write_cache=False,
+		                  validate_cache=False)
+
+		for px in range(0, px_dim): # column iterator
+		    Y = Y_row.take(px, axis=2)
+		    
+		    if (Y[0:6] == NDV).mean() > 0.3:
+		        continue
+		    else: # process time series for disturbance events
+		        
 				# Mask based on physical constraints and Fmask 
 				valid = cyprep.get_valid_mask( \
 				            Y, \
@@ -177,13 +183,16 @@ def annual(row1, row2):
 				        max_TCG[py, px, index] = TCG_iqr_H[year]
 				        max_TCW[py, px, index] = TCW_iqr_H[year]
 
+		run_time = time.time() - start_time
+        print('Line {line} took {run_time}s to run'.format(line=py, run_time=run_time))
+
 	print('Statistics complete')
 
 	# Output map for each year
 	in_ds = gdal.Open(example_img_fn, gdal.GA_ReadOnly)
 
 	for index, year in enumerate(years): 
-	    condition_fn = './{WRS2}_ST-BGW_mean_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    condition_fn = '../results/{WRS2}_ST-BGW_mean_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
 	    out_driver = gdal.GetDriverByName("GTiff")
 	    out_ds = out_driver.Create(condition_fn, 
 	                               example_img.shape[1],  # x size
@@ -193,17 +202,17 @@ def annual(row1, row2):
 	    out_ds.SetProjection(in_ds.GetProjection())
 	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
 	    out_ds.GetRasterBand(1).WriteArray(mean_TCB[:, :, index])
-	    out_ds.GetRasterBand(1).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(1).SetNoDataValue(0)
 	    out_ds.GetRasterBand(1).SetDescription('Mean Annual TC Brightness')
 	    out_ds.GetRasterBand(2).WriteArray(mean_TCG[:, :, index])
-	    out_ds.GetRasterBand(2).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(2).SetNoDataValue(0)
 	    out_ds.GetRasterBand(2).SetDescription('Mean Annual TC Greenness')
 	    out_ds.GetRasterBand(3).WriteArray(mean_TCW[:, :, index])
-	    out_ds.GetRasterBand(3).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(3).SetNoDataValue(0)
 	    out_ds.GetRasterBand(3).SetDescription('Mean Annual TC Wetness')
 	    out_ds = None
 
-	    condition_fn = './{WRS2}_ST-BGW_min_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    condition_fn = '../results/{WRS2}_ST-BGW_min_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
 	    out_driver = gdal.GetDriverByName("GTiff")
 	    out_ds = out_driver.Create(condition_fn, 
 	                               example_img.shape[1],  # x size
@@ -213,17 +222,17 @@ def annual(row1, row2):
 	    out_ds.SetProjection(in_ds.GetProjection())
 	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
 	    out_ds.GetRasterBand(1).WriteArray(min_TCB[:, :, index])
-	    out_ds.GetRasterBand(1).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(1).SetNoDataValue(0)
 	    out_ds.GetRasterBand(1).SetDescription('Minimum Annual TC Brightness')
 	    out_ds.GetRasterBand(2).WriteArray(min_TCG[:, :, index])
-	    out_ds.GetRasterBand(2).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(2).SetNoDataValue(0)
 	    out_ds.GetRasterBand(2).SetDescription('Minimum Annual TC Greenness')
 	    out_ds.GetRasterBand(3).WriteArray(min_TCW[:, :, index])
-	    out_ds.GetRasterBand(3).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(3).SetNoDataValue(0)
 	    out_ds.GetRasterBand(3).SetDescription('Minimum Annual TC Wetness')
 	    out_ds = None
 
-	    condition_fn = './{WRS2}_ST-BGW_max_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    condition_fn = '../results/{WRS2}_ST-BGW_max_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
 	    out_driver = gdal.GetDriverByName("GTiff")
 	    out_ds = out_driver.Create(condition_fn, 
 	                               example_img.shape[1],  # x size
@@ -233,13 +242,13 @@ def annual(row1, row2):
 	    out_ds.SetProjection(in_ds.GetProjection())
 	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
 	    out_ds.GetRasterBand(1).WriteArray(max_TCB[:, :, index])
-	    out_ds.GetRasterBand(1).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(1).SetNoDataValue(0)
 	    out_ds.GetRasterBand(1).SetDescription('Maximum Annual TC Brightness')
 	    out_ds.GetRasterBand(2).WriteArray(max_TCG[:, :, index])
-	    out_ds.GetRasterBand(2).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(2).SetNoDataValue(0)
 	    out_ds.GetRasterBand(2).SetDescription('Maximum Annual TC Greenness')
 	    out_ds.GetRasterBand(3).WriteArray(max_TCW[:, :, index])
-	    out_ds.GetRasterBand(3).SetNoDataValue(-9999)
+	    out_ds.GetRasterBand(3).SetNoDataValue(0)
 	    out_ds.GetRasterBand(3).SetDescription('Maximum Annual TC Wetness')
 	    out_ds = None
 
