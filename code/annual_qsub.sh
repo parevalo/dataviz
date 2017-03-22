@@ -4,18 +4,18 @@
 #$ -N annualstats
 #$ -j y
 
-qsub annual.sh 0 500
-qsub annual.sh 500 1000
-qsub annual.sh 1000 1500
-qsub annual.sh 1500 2000
-qsub annual.sh 2000 2500
-qsub annual.sh 2500 3000
-qsub annual.sh 3000 3500
-qsub annual.sh 3500 4000
-qsub annual.sh 4000 4500
-qsub annual.sh 4500 5000
-qsub annual.sh 5000 5500
-qsub annual.sh 5500 6000
-qsub annual.sh 6000 6500
-qsub annual.sh 6500 7000
-qsub annual.sh 7000 7170
+start=0
+step=100
+stop=7100
+end=7170
+
+# run annual stats for image chunks
+for row1 in $(seq $start $step $stop); do
+	row2=`expr $row1 + $step`
+	qsub annual.sh -j y -V -l h_rt=48:00:00 -N stats_$row1 -b y \
+	$row1 $row2
+
+done
+
+# run last odd rows
+qsub annual.sh $row2 $stop
