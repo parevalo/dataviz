@@ -184,9 +184,12 @@ def annual(row1, row2):
 				        max_TCW[py, px, index] = TCW_iqr_H[year]
 
 		run_time = time.time() - start_time
-        print('Line {line} took {run_time}s to run'.format(line=py, run_time=run_time))
+		print('Line {line} took {run_time}s to run'.format(line=py, run_time=run_time))
+		sys.stdout.flush()
 
 	print('Statistics complete')
+	print('Writing results to raster...')
+	start_time = time.time()
 
 	# Output map for each year
 	in_ds = gdal.Open(example_img_fn, gdal.GA_ReadOnly)
@@ -252,6 +255,9 @@ def annual(row1, row2):
 	    out_ds.GetRasterBand(3).SetDescription('Maximum Annual TC Wetness')
 	    out_ds = None
 
+	run_time = time.time() - start_time
+	print('Rasters took {run_time}s to export'.format(run_time=run_time))
+	sys.stdout.flush()
 
 # Define image reading function
 def read_image(f):
