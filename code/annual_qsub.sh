@@ -7,7 +7,7 @@
 start=0
 step=100
 stop=7100
-end=7170
+end=7150
 
 # run annual stats for image chunks
 for row1 in $(seq $start $step $stop); do
@@ -17,4 +17,4 @@ for row1 in $(seq $start $step $stop); do
 done
 
 # run last odd rows
-qsub annual.sh $row2 $end
+qsub annual.sh $stop $end
