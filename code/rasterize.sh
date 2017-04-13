@@ -29,5 +29,5 @@ echo $warp_ext
 gdal_rasterize -te $warp_ext -tr 30 -30 \
     -a FORTYPCD -l $lyr \
     -a_nodata -9999 -init -9999 -ot Int32 \
-    -co "COMPRESS=LZW" -a_srs EPSG:5070 \
+    -co "COMPRESS=LZW" \
     $shp $output
