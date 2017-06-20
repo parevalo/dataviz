@@ -17,21 +17,26 @@ from yatsm.utils import csvfile_to_dataframe, get_image_IDs
 import yatsm._cyprep as cyprep
 
 @click.command()
-@click.argument('row1', metavar='<row1>', nargs=1, type=click.INT)
-@click.argument('row2', metavar='<row2>', nargs=1, type=click.INT)
+@click.argument('row1', metavar='<row1>', nargs=1, type=click.INT
+	              help='Start row')
+@click.argument('row2', metavar='<row2>', nargs=1, type=click.INT
+	              help='End row')
+@click.option('--pct', default=2, type=click.FLOAT, metavar='<pct>',
+				show_default=True,
+              	help='percent clip for annual IQR')
 
 
 def annual(row1, row2):
 	NDV = -9999   
 
 	# EXAMPLE IMAGE for dimensions, map creation
-	example_img_fn = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/images/example_img'
-	#example_img_fn = '/projectnb/landsat/projectnb/landsat/projects/Massachusetts/p012r031/images/example_img'
+	#example_img_fn = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/images/example_img'
+	example_img_fn = '/projectnb/landsat/projects/Massachusetts/p012r031/images/example_img'
 	# YATSM CONFIG FILE
-	config_file = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/p045r030_config_LCMS.yaml'
-	#config_file = '/projectnb/landsat/projectnb/landsat/projects/Massachusetts/p012r031/p012r031_config_pixel.yaml'
+	#config_file = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/p045r030_config_LCMS.yaml'
+	config_file = '/projectnb/landsat/projects/Massachusetts/p012r031/p012r031_config_pixel.yaml'
 
-	WRS2 = 'p045r030'
+	WRS2 = 'p012r031'
 
 	# Up front -- declare hard coded dataset attributes (for now)
 	BAND_NAMES = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2', 'therm', 'tcb', 'tcg', 'tcw', 'fmask']
@@ -40,11 +45,6 @@ def annual(row1, row2):
 	dtype = np.int16
 	years = range(1985, 2016, 1)
 	length = 33 # number of years 
-
-	# Set percentiles for range calculations
-	# TODO - make this a click input
-	pct1=0.05
-	pct2=0.95
 
 	# Read in example image
 	example_img = read_image(example_img_fn)
@@ -150,23 +150,35 @@ def annual(row1, row2):
 				### TC Brightness
 				# Calculate mean annual TCB
 				TCB_mean = year_group_fmask['tcb'].mean()
+				if pct is None:
+					TCB_max = year_group_fmask['tcb'].max()
+					TCB_min = year_group_fmask['tcb'].min()
+				else:
 				# percentile clip 
-				TCB_iqr_H = year_group_fmask['tcb'].quantile([pct2])
-				TCB_iqr_L = year_group_fmask['tcb'].quantile([pct1])
+					TCB_max = year_group_fmask['tcb'].quantile([pct2])
+					TCB_min = year_group_fmask['tcb'].quantile([pct1])
 
 				### TC Greenness 
 				# Calculate mean annual TCG
 				TCG_mean = year_group_fmask['tcg'].mean() 
+				if pct is None:
+					TCG_max = year_group_fmask['tcg'].max()
+					TCG_min = year_group_fmask['tcg'].min()
+				else:
 				# percentile clip 
-				TCG_iqr_H = year_group_fmask['tcg'].quantile([pct2])
-				TCG_iqr_L = year_group_fmask['tcg'].quantile([pct1])
+					TCG_max = year_group_fmask['tcg'].quantile([pct2])
+					TCG_min = year_group_fmask['tcg'].quantile([pct1])
 
 				### TC Wetness 
 				# Calculate mean annual TCW
 				TCW_mean = year_group_fmask['tcw'].mean()
+				if pct is None:
+					TCW_max = year_group_fmask['tcw'].max()
+					TCW_min = year_group_fmask['tcw'].min()
+				else:
 				# percentile clip 
-				TCW_iqr_H = year_group_fmask['tcw'].quantile([pct2])
-				TCW_iqr_L = year_group_fmask['tcw'].quantile([pct1])
+					TCW_max = year_group_fmask['tcw'].quantile([pct2])
+					TCW_min = year_group_fmask['tcw'].quantile([pct1])
 
 
 				for index, year in enumerate(years):             
@@ -175,13 +187,13 @@ def annual(row1, row2):
 				        mean_TCG[py, px, index] = TCG_mean[year]
 				        mean_TCW[py, px, index] = TCW_mean[year]
 
-				        min_TCB[py, px, index] = TCB_iqr_L[year]
-				        min_TCG[py, px, index] = TCG_iqr_L[year]
-				        min_TCW[py, px, index] = TCW_iqr_L[year]
+				        min_TCB[py, px, index] = TCB_min[year]
+				        min_TCG[py, px, index] = TCG_min[year]
+				        min_TCW[py, px, index] = TCW_min[year]
 
-				        max_TCB[py, px, index] = TCB_iqr_H[year]
-				        max_TCG[py, px, index] = TCG_iqr_H[year]
-				        max_TCW[py, px, index] = TCW_iqr_H[year]
+				        max_TCB[py, px, index] = TCB_max[year]
+				        max_TCG[py, px, index] = TCG_max[year]
+				        max_TCW[py, px, index] = TCW_max[year]
 
 		run_time = time.time() - start_time
 		print('Line {line} took {run_time}s to run'.format(line=py, run_time=run_time))
