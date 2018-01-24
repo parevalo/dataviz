@@ -7,4 +7,4 @@
 row1=$1
 row2=$2
 
-python annual.py $row1 $row2
+python /projectnb/landsat/users/valpasq/LCMS/dataviz/code/annual.py $row1 $row2

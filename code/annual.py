@@ -17,25 +17,22 @@ from yatsm.utils import csvfile_to_dataframe, get_image_IDs
 import yatsm._cyprep as cyprep
 
 @click.command()
-@click.argument('row1', metavar='<row1>', nargs=1, type=click.INT
-	              help='Start row')
-@click.argument('row2', metavar='<row2>', nargs=1, type=click.INT
-	              help='End row')
-@click.option('--pct', default=2, type=click.FLOAT, metavar='<pct>',
-				show_default=True,
-              	help='percent clip for annual IQR')
+@click.argument('row1', metavar='<row1>', nargs=1, type=click.INT)
+@click.argument('row2', metavar='<row2>', nargs=1, type=click.INT)
+@click.option('--pct', default=2, is_flag=True, type=click.INT, metavar='<pct>')
 
-
-def annual(row1, row2):
+def annual(row1, row2, pct):
 	NDV = -9999   
 
 	# EXAMPLE IMAGE for dimensions, map creation
-	#example_img_fn = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/images/example_img'
+	#example_img_fn = '/projectnb/landsat/users/valpasq/LCMS/stacks/p035r032/images/example_img'
 	example_img_fn = '/projectnb/landsat/projects/Massachusetts/p012r031/images/example_img'
+	
 	# YATSM CONFIG FILE
-	#config_file = '/projectnb/landsat/users/valpasq/LCMS/stacks/p045r030/p045r030_config_LCMS.yaml'
+	#config_file = '/projectnb/landsat/users/valpasq/LCMS/stacks/p035r032/p035r032_config_LCMS.yaml'
 	config_file = '/projectnb/landsat/projects/Massachusetts/p012r031/p012r031_config_pixel.yaml'
 
+	#WRS2 = 'p027r027'
 	WRS2 = 'p012r031'
 
 	# Up front -- declare hard coded dataset attributes (for now)
@@ -73,13 +70,21 @@ def annual(row1, row2):
 	mean_TCG = np.zeros((py_dim, px_dim, length))
 	mean_TCW = np.zeros((py_dim, px_dim, length))
 
-	min_TCB = np.zeros((py_dim, px_dim, length))
-	min_TCG = np.zeros((py_dim, px_dim, length))
-	min_TCW = np.zeros((py_dim, px_dim, length))
+	min_val_TCB = np.zeros((py_dim, px_dim, length))
+	min_val_TCG = np.zeros((py_dim, px_dim, length))
+	min_val_TCW = np.zeros((py_dim, px_dim, length))
 
-	max_TCB = np.zeros((py_dim, px_dim, length))
-	max_TCG = np.zeros((py_dim, px_dim, length))
-	max_TCW = np.zeros((py_dim, px_dim, length))
+	min_idx_TCB = np.zeros((py_dim, px_dim, length))
+	min_idx_TCG = np.zeros((py_dim, px_dim, length))
+	min_idx_TCW = np.zeros((py_dim, px_dim, length))
+
+	max_val_TCB = np.zeros((py_dim, px_dim, length))
+	max_val_TCG = np.zeros((py_dim, px_dim, length))
+	max_val_TCW = np.zeros((py_dim, px_dim, length))
+
+	max_idx_TCB = np.zeros((py_dim, px_dim, length))
+	max_idx_TCG = np.zeros((py_dim, px_dim, length))
+	max_idx_TCW = np.zeros((py_dim, px_dim, length))
 
 	for py in range(row1, row2): # row iterator
 		print('Working on row {py}'.format(py=py))
@@ -144,15 +149,22 @@ def annual(row1, row2):
 				years_fmask = np.asarray(year_group_fmask.groups.keys()) 
 				years_fmask = years_fmask.astype(int)
 
+# TODO: FIX THIS!!!!!!!
+				#import pdb; pdb.set_trace()
+				month_group_fmask = data_fmask_df.groupby([data_fmask_df.date.dt.year, data_fmask_df.date.dt.month]).max()
+				month_groups = month_group_fmask.groupby(month_group_fmask.date.dt.year)
+
 				# Calculate number of observations
 				nobs = year_group_fmask['tcb'].count()
 
 				### TC Brightness
 				# Calculate mean annual TCB
 				TCB_mean = year_group_fmask['tcb'].mean()
-				if pct is None:
-					TCB_max = year_group_fmask['tcb'].max()
-					TCB_min = year_group_fmask['tcb'].min()
+				if pct == False:
+					TCB_max_val = month_groups['tcb'].max()
+					TCB_max_idx = month_groups['tcb'].idxmax()
+					TCB_min_val = month_groups['tcb'].min()
+					TCB_min_idx = month_groups['tcb'].idxmin()
 				else:
 				# percentile clip 
 					TCB_max = year_group_fmask['tcb'].quantile([pct2])
@@ -161,9 +173,11 @@ def annual(row1, row2):
 				### TC Greenness 
 				# Calculate mean annual TCG
 				TCG_mean = year_group_fmask['tcg'].mean() 
-				if pct is None:
-					TCG_max = year_group_fmask['tcg'].max()
-					TCG_min = year_group_fmask['tcg'].min()
+				if pct == False:
+					TCG_max_val = month_groups['tcg'].max()
+					TCG_max_idx = month_groups['tcg'].idxmax()
+					TCG_min_val = month_groups['tcg'].min()
+					TCG_min_idx = month_groups['tcg'].idxmin()
 				else:
 				# percentile clip 
 					TCG_max = year_group_fmask['tcg'].quantile([pct2])
@@ -172,9 +186,11 @@ def annual(row1, row2):
 				### TC Wetness 
 				# Calculate mean annual TCW
 				TCW_mean = year_group_fmask['tcw'].mean()
-				if pct is None:
-					TCW_max = year_group_fmask['tcw'].max()
-					TCW_min = year_group_fmask['tcw'].min()
+				if pct == False:
+					TCW_max_val = month_groups['tcw'].max()
+					TCW_max_idx = month_groups['tcw'].idxmax()
+					TCW_min_val = month_groups['tcw'].min()
+					TCW_min_idx = month_groups['tcw'].idxmin()
 				else:
 				# percentile clip 
 					TCW_max = year_group_fmask['tcw'].quantile([pct2])
@@ -187,13 +203,21 @@ def annual(row1, row2):
 				        mean_TCG[py, px, index] = TCG_mean[year]
 				        mean_TCW[py, px, index] = TCW_mean[year]
 
-				        min_TCB[py, px, index] = TCB_min[year]
-				        min_TCG[py, px, index] = TCG_min[year]
-				        min_TCW[py, px, index] = TCW_min[year]
+				        min_val_TCB[py, px, index] = TCB_min_val[year]
+				        min_val_TCG[py, px, index] = TCG_min_val[year]
+				        min_val_TCW[py, px, index] = TCW_min_val[year]
 
-				        max_TCB[py, px, index] = TCB_max[year]
-				        max_TCG[py, px, index] = TCG_max[year]
-				        max_TCW[py, px, index] = TCW_max[year]
+				        max_val_TCB[py, px, index] = TCB_max_val[year]
+				        max_val_TCG[py, px, index] = TCG_max_val[year]
+				        max_val_TCW[py, px, index] = TCW_max_val[year]
+
+				        min_idx_TCB[py, px, index] = TCB_min_idx[year][1]
+				        min_idx_TCG[py, px, index] = TCG_min_idx[year][1]
+				        min_idx_TCW[py, px, index] = TCW_min_idx[year][1]
+
+				        max_idx_TCB[py, px, index] = TCB_max_idx[year][1]
+				        max_idx_TCG[py, px, index] = TCG_max_idx[year][1]
+				        max_idx_TCW[py, px, index] = TCW_max_idx[year][1]
 
 		run_time = time.time() - start_time
 		print('Line {line} took {run_time}s to run'.format(line=py, run_time=run_time))
@@ -207,7 +231,7 @@ def annual(row1, row2):
 	in_ds = gdal.Open(example_img_fn, gdal.GA_ReadOnly)
 
 	for index, year in enumerate(years): 
-	    condition_fn = '../results/{WRS2}_ST-BGW_mean_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    condition_fn = '/projectnb/landsat/users/valpasq/LCMS/dataviz/results/{WRS2}/mean/{WRS2}_ST-BGW_mean_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
 	    out_driver = gdal.GetDriverByName("GTiff")
 	    out_ds = out_driver.Create(condition_fn, 
 	                               example_img.shape[1],  # x size
@@ -227,7 +251,7 @@ def annual(row1, row2):
 	    out_ds.GetRasterBand(3).SetDescription('Mean Annual TC Wetness')
 	    out_ds = None
 
-	    condition_fn = '../results/{WRS2}_ST-BGW_min_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    condition_fn = '/projectnb/landsat/users/valpasq/LCMS/dataviz/results/{WRS2}/min/{WRS2}_ST-BGW_min_val_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
 	    out_driver = gdal.GetDriverByName("GTiff")
 	    out_ds = out_driver.Create(condition_fn, 
 	                               example_img.shape[1],  # x size
@@ -236,18 +260,18 @@ def annual(row1, row2):
 	                               gdal.GDT_Int32)
 	    out_ds.SetProjection(in_ds.GetProjection())
 	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
-	    out_ds.GetRasterBand(1).WriteArray(min_TCB[:, :, index])
+	    out_ds.GetRasterBand(1).WriteArray(min_val_TCB[:, :, index])
 	    out_ds.GetRasterBand(1).SetNoDataValue(0)
 	    out_ds.GetRasterBand(1).SetDescription('Minimum Annual TC Brightness')
-	    out_ds.GetRasterBand(2).WriteArray(min_TCG[:, :, index])
+	    out_ds.GetRasterBand(2).WriteArray(min_val_TCG[:, :, index])
 	    out_ds.GetRasterBand(2).SetNoDataValue(0)
 	    out_ds.GetRasterBand(2).SetDescription('Minimum Annual TC Greenness')
-	    out_ds.GetRasterBand(3).WriteArray(min_TCW[:, :, index])
+	    out_ds.GetRasterBand(3).WriteArray(min_val_TCW[:, :, index])
 	    out_ds.GetRasterBand(3).SetNoDataValue(0)
 	    out_ds.GetRasterBand(3).SetDescription('Minimum Annual TC Wetness')
 	    out_ds = None
 
-	    condition_fn = '../results/{WRS2}_ST-BGW_max_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    condition_fn = '/projectnb/landsat/users/valpasq/LCMS/dataviz/results/{WRS2}/max/{WRS2}_ST-BGW_max_val_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
 	    out_driver = gdal.GetDriverByName("GTiff")
 	    out_ds = out_driver.Create(condition_fn, 
 	                               example_img.shape[1],  # x size
@@ -256,13 +280,53 @@ def annual(row1, row2):
 	                               gdal.GDT_Int32)
 	    out_ds.SetProjection(in_ds.GetProjection())
 	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
-	    out_ds.GetRasterBand(1).WriteArray(max_TCB[:, :, index])
+	    out_ds.GetRasterBand(1).WriteArray(max_val_TCB[:, :, index])
 	    out_ds.GetRasterBand(1).SetNoDataValue(0)
 	    out_ds.GetRasterBand(1).SetDescription('Maximum Annual TC Brightness')
-	    out_ds.GetRasterBand(2).WriteArray(max_TCG[:, :, index])
+	    out_ds.GetRasterBand(2).WriteArray(max_val_TCG[:, :, index])
 	    out_ds.GetRasterBand(2).SetNoDataValue(0)
 	    out_ds.GetRasterBand(2).SetDescription('Maximum Annual TC Greenness')
-	    out_ds.GetRasterBand(3).WriteArray(max_TCW[:, :, index])
+	    out_ds.GetRasterBand(3).WriteArray(max_val_TCW[:, :, index])
+	    out_ds.GetRasterBand(3).SetNoDataValue(0)
+	    out_ds.GetRasterBand(3).SetDescription('Maximum Annual TC Wetness')
+	    out_ds = None
+
+	    condition_fn = '/projectnb/landsat/users/valpasq/LCMS/dataviz/results/{WRS2}/min/{WRS2}_ST-BGW_min_mon_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    out_driver = gdal.GetDriverByName("GTiff")
+	    out_ds = out_driver.Create(condition_fn, 
+	                               example_img.shape[1],  # x size
+	                               example_img.shape[0],  # y size
+	                               3,  # number of bands
+	                               gdal.GDT_Int32)
+	    out_ds.SetProjection(in_ds.GetProjection())
+	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
+	    out_ds.GetRasterBand(1).WriteArray(min_idx_TCB[:, :, index])
+	    out_ds.GetRasterBand(1).SetNoDataValue(0)
+	    out_ds.GetRasterBand(1).SetDescription('Minimum Annual TC Brightness')
+	    out_ds.GetRasterBand(2).WriteArray(min_idx_TCG[:, :, index])
+	    out_ds.GetRasterBand(2).SetNoDataValue(0)
+	    out_ds.GetRasterBand(2).SetDescription('Minimum Annual TC Greenness')
+	    out_ds.GetRasterBand(3).WriteArray(min_idx_TCW[:, :, index])
+	    out_ds.GetRasterBand(3).SetNoDataValue(0)
+	    out_ds.GetRasterBand(3).SetDescription('Minimum Annual TC Wetness')
+	    out_ds = None
+
+	    condition_fn = '/projectnb/landsat/users/valpasq/LCMS/dataviz/results/{WRS2}/max/{WRS2}_ST-BGW_max_mon_{year}_{row1}-{row2}.tif'.format(WRS2=WRS2, year=year, row1=row1, row2=row2)
+	    out_driver = gdal.GetDriverByName("GTiff")
+	    out_ds = out_driver.Create(condition_fn, 
+	                               example_img.shape[1],  # x size
+	                               example_img.shape[0],  # y size
+	                               3,  # number of bands
+	                               gdal.GDT_Int32)
+	    out_ds.SetProjection(in_ds.GetProjection())
+	    out_ds.SetGeoTransform(in_ds.GetGeoTransform())
+	    out_ds.GetRasterBand(1).WriteArray(max_idx_TCB[:, :, index])
+	    out_ds.GetRasterBand(1).SetNoDataValue(0)
+	    out_ds.GetRasterBand(1).SetDescription('Maximum Annual TC Brightness')
+	    out_ds.GetRasterBand(2).WriteArray(max_idx_TCG[:, :, index])
+	    out_ds.GetRasterBand(2).SetNoDataValue(0)
+	    out_ds.GetRasterBand(2).SetDescription('Maximum Annual TC Greenness')
+	    out_ds.GetRasterBand(3).WriteArray(max_idx_TCW[:, :, index])
 	    out_ds.GetRasterBand(3).SetNoDataValue(0)
 	    out_ds.GetRasterBand(3).SetDescription('Maximum Annual TC Wetness')
 	    out_ds = None
